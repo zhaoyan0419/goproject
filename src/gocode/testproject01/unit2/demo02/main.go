@@ -45,6 +45,7 @@ func strtocommon() {
 
 	//string -> int
 	s2 := "123"
+	// 字符串，进制，和int多少
 	b1, _ := strconv.ParseInt(s2, 10, 64)
 	fmt.Printf("the type of b1 is %T\n", b1)
 

@@ -24,7 +24,7 @@ func main() {
 		fmt.Printf("分析日志文件失败: %v\n", err)
 		return
 	}
-	fmt.Println(stats.TotalLines)
+	//fmt.Println(stats.TotalLines)
 	// 输出统计结果
 	fmt.Printf("日志分析完成！\n")
 	fmt.Printf("总行数: %d\n", stats.TotalLines)
@@ -94,13 +94,15 @@ func processLogLine(line string, stats *LogStats) {
 
 	// 跳过空行
 	if line == "" {
+		stats.ErrorCount++
 		return
+
 	}
 
 	// 示例：简单的Nginx日志格式解析
 	// 真实日志格式：127.0.0.1 - - [10/Oct/2023:14:32:01 +0800] "GET /api/user HTTP/1.1" 200 1234
 	parts := strings.Fields(line) // 按空格分割行
-	fmt.Println(parts)
+	//fmt.Println(parts)
 	if len(parts) < 7 {
 		stats.ErrorCount++
 		return // 格式错误，跳过

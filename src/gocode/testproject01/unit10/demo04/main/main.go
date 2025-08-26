@@ -17,7 +17,9 @@ func main() {
 	defer content.Close()
 
 	// 写文件操作
+	// 创建一个写缓冲区
 	writer := bufio.NewWriter(content)
+	// 调用writer的WriteString方法
 	writer.WriteString("你好马士兵\n")
 	// 流在缓冲区，需要刷新数据到文件中
 	writer.Flush()

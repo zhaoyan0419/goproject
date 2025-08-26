@@ -2,13 +2,34 @@ package main
 
 import (
 	"fmt"
-	"strings"
+	"sync"
+	"time"
 )
 
+var i int
+var wg sync.WaitGroup
+var clo sync.Mutex
+
+func add() {
+	//defer wg.Done()
+	clo.Lock()
+	i = i + 1
+	time.Sleep(time.Second * 10)
+	clo.Unlock()
+}
+func sub() {
+	defer wg.Done()
+	clo.Lock()
+	i = i + 100
+	fmt.Println(i)
+	clo.Unlock()
+}
+
 func main() {
-	str1 := "192.168.1.100 - - [10/Oct/2023:14:32:02 +0800] \"POST /api/login HTTP/1.1\" 200 567"
-	s1 := strings.Fields(str1)
-	for _, v := range s1 {
-		fmt.Printf("%v\n", v)
-	}
+	wg.Add(1)
+
+	add()
+	// 在add函数中加了互斥锁，在执行add函数执行的过程中，下边的协程需要等待，需要等待add函数释放了互斥锁
+	go sub()
+	wg.Wait()
 }
