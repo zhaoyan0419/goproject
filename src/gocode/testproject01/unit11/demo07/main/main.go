@@ -3,33 +3,36 @@ package main
 import (
 	"fmt"
 	"sync"
+	"time"
 )
 
-var wg sync.WaitGroup
-
-func raedChan(c chan int) {
+// 写
+func WriteData(c chan int) {
 	defer wg.Done()
+	for i := 1; i <= 50; i++ {
+		c <- i
+		fmt.Println("写入的数据为", i)
+		time.Sleep(time.Second * 2)
+	}
+	close(c)
+}
 
-	for i := range c {
-		println("管道中传来了一个数字", i)
+// 读
+func ReadData(c chan int) {
+	defer wg.Done()
+	for value := range c {
+		fmt.Println("读取的数据为", value)
+		time.Sleep(time.Second * 3)
 	}
 }
 
+var wg sync.WaitGroup
+
 func main() {
-	wg.Add(1)
-	c1 := make(chan int, 50)
-	go raedChan(c1)
-
-	for {
-		var num int
-		fmt.Println("请输入一个数字")
-		_, err := fmt.Scanln(&num)
-		if err != nil {
-			fmt.Println("输入错误")
-		}
-		c1 <- num
-	}
-
+	wg.Add(2)
+	var c1 chan int
+	c1 = make(chan int, 50)
+	go WriteData(c1)
+	go ReadData(c1)
 	wg.Wait()
-
 }
