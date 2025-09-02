@@ -27,3 +27,18 @@ func TestTcpServerRW(t *testing.T) {
 func TestTcpClientRW(t *testing.T) {
 	TcpClientRW()
 }
+
+func TestServerWriteBlock(t *testing.T) {
+	ServerWriteBlock()
+}
+func TestClientNoneRead(t *testing.T) {
+	ClientNoneRead()
+}
+
+func TestServerListen(t *testing.T) {
+	ServerListen()
+}
+
+func TestClientDial(t *testing.T) {
+	ClientDial()
+}

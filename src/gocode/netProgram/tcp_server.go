@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -106,10 +107,12 @@ func HandleConn(conn net.Conn) {
 	}
 	log.Printf("server write len is %d\n", n)
 	// 从客户端接收数据
-	ServerRead(conn)
 
 }
-func ServerRead(conn net.Conn) {
+
+// 循环读
+func ServerLoopRead(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		s1 := make([]byte, 1024)
 		n, err := conn.Read(s1)
@@ -118,5 +121,82 @@ func ServerRead(conn net.Conn) {
 			return
 		}
 		log.Printf("received from client data is :%s", string(s1[:n]))
+	}
+}
+
+// 验证写阻塞
+func ServerWriteBlock() {
+	ServerAddr := ":5678"
+	listener, err := net.Listen(tcp, ServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("服务器监听成功，监听了", ServerAddr)
+	defer listener.Close()
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Println("connection set false", err)
+			break
+		}
+		go ServerWriteOnce(conn)
+
+	}
+
+}
+
+// 处理conn，循环写入
+func ServerLoopWrite(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+	// 设置超时，无能无止境的写，永远写
+	//conn.SetWriteDeadline(time.Now().Add(time.Second * 5))
+	num := 10
+	data := []byte("hello" + "\n")
+	for i := 0; i < num; i++ {
+
+		wn, err := conn.Write(data)
+		if err != nil {
+			fmt.Println("数据写入失败", err)
+			break
+		}
+		if err == nil && wn == len(data) {
+			log.Println("数据写入成功，第", i, "次写入")
+		}
+	}
+}
+
+// 处理conn，单次写入
+func ServerWriteOnce(conn net.Conn) {
+	data := []byte("server send some data to client" + "\n")
+	wn, err := conn.Write(data)
+	if err != nil {
+		fmt.Println("write failed", err)
+		return
+	}
+	if err == nil && wn == len(data) {
+		log.Println("数据写入成功，发送数据长度为", wn)
+	}
+}
+
+// server监听（通用）
+func ServerListen() {
+	wg := sync.WaitGroup{}
+	ServerAddr := ":5678"
+	listener, err := net.Listen(tcp, ServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer listener.Close()
+	fmt.Println("Server Listening Success, Listen Address:", ServerAddr)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Println(err)
+			break
+		}
+		wg.Add(2)
+		go ServerLoopWrite(conn, &wg)
+		go ServerLoopRead(conn, &wg)
 	}
 }
