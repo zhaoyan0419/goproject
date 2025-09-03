@@ -1,6 +1,7 @@
 package netProgram
 
 import (
+	"encoding/gob"
 	"fmt"
 	"log"
 	"net"
@@ -162,10 +163,53 @@ func ClientReadOnce(conn net.Conn) {
 	fmt.Println("read data seccess,data:", string(data[:rn]))
 }
 
-// 循环读取
+// Client拨号dial（通用）
+func ClientDial() {
+
+	ServerAddr := "127.0.0.1:5678"
+	conn, err := net.Dial(tcp, ServerAddr)
+	if err != nil {
+		log.Fatal("Dial failed", err)
+	}
+	defer conn.Close()
+	fmt.Println("Connect Server Success,ServerAddr:", conn.RemoteAddr().String())
+	ClientHandleConnConcurrency(conn)
+
+}
+
+// 客户端并发处理conn
+func ClientHandleConnConcurrency(conn net.Conn) {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go ClientLoopRead(conn, &wg)
+	wg.Add(1)
+	go ClientLoopWrite(conn, &wg, "Client Write From Goroutine1")
+	wg.Add(1)
+	go ClientLoopWrite(conn, &wg, "Client Write From Goroutine2")
+	wg.Add(1)
+	go ClientLoopWrite(conn, &wg, "Client Write From Goroutine3")
+	wg.Wait()
+}
+
+// 客户端循环写
+func ClientLoopWrite(conn net.Conn, wg *sync.WaitGroup, dt string) {
+	defer wg.Done()
+	WriteData := []byte(dt + "\n")
+	num := 10
+	for i := 0; i < num; i++ {
+		n, err := conn.Write(WriteData)
+		if err != nil {
+			fmt.Println("Write failed", err)
+		}
+		fmt.Println(i, ",Write data lenth:", n, dt)
+	}
+}
+
+// 客户端循环读取
 func ClientLoopRead(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
-	data := make([]byte, 10)
+	conn.SetReadDeadline(time.Now().Add(time.Second * 5))
+	data := make([]byte, 1024)
 	for {
 		rn, err := conn.Read(data)
 		if err != nil {
@@ -176,9 +220,9 @@ func ClientLoopRead(conn net.Conn, wg *sync.WaitGroup) {
 	}
 }
 
-// Client拨号dial（通用）
-func ClientDial() {
-	wg := sync.WaitGroup{}
+// Client拨号dial，格式化数据传输
+func ClientDialFormat() {
+
 	ServerAddr := "127.0.0.1:5678"
 	conn, err := net.Dial(tcp, ServerAddr)
 	if err != nil {
@@ -186,22 +230,54 @@ func ClientDial() {
 	}
 	defer conn.Close()
 	fmt.Println("Connect Server Success,ServerAddr:", conn.RemoteAddr().String())
-	//concurrency(conn)
-	wg.Add(2)
-	go ClientLoopRead(conn, &wg)
-	go ClientLoopWrite(conn, &wg)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go ClientReadFormat(conn, &wg)
+	wg.Wait()
+
+}
+
+// 客户端传输格式化消息
+func ClientHandleConnFromat(conn net.Conn) {
+	defer conn.Close()
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go ClientReadFormat(conn, &wg)
 	wg.Wait()
 }
 
-func ClientLoopWrite(conn net.Conn, wg *sync.WaitGroup) {
+// 客户端循环读取
+func ClientReadFormat(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
-	WriteData := []byte("Client Write Some Data to Server" + "\n")
-	num := 10
-	for i := 0; i < num; i++ {
-		n, err := conn.Write(WriteData)
-		if err != nil {
-			fmt.Println("Write failed", err)
+
+	for {
+		// 从客户端接收到数据
+		//接收到数据后，解码后使用
+		type Message struct {
+			ID      uint   `json:"id,omitempty"`
+			Code    string `json:"code,omitempty"`
+			Content string `json:"content,omitempty"`
 		}
-		fmt.Println("Write data lenth:", n)
+		//传递的消息类型
+		message := Message{}
+		//// 1. JSON解码
+		//decoder := json.NewDecoder(conn)
+		//// 利用解码器进行解码
+		//// 解码操作，从conn中读取内容，成功后会将解码后的结果赋值到message
+		//if err := decoder.Decode(&message); err != nil {
+		//	log.Println(err)
+		//	continue
+		//}
+		//log.Println(message)
+
+		// 2. GOB解码
+		decoder := gob.NewDecoder(conn)
+		// 利用解码器进行解码
+		// 解码操作，从conn中读取内容，成功后会将解码后的结果赋值到message
+		if err := decoder.Decode(&message); err != nil {
+			log.Println(err)
+			continue
+		}
+		log.Println(message)
 	}
 }

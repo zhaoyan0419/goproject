@@ -9,8 +9,8 @@ import (
 
 func main() {
 
-	addr := "tengxunyun.zhaoyan.site:7899"
-	//addr := "127.0.0.1:7899"
+	//addr := "tengxunyun.zhaoyan.site:7899"
+	addr := "127.0.0.1:7899"
 	con, err := net.Dial("tcp", addr)
 	if err != nil {
 		fmt.Println("连接失败,err:", err)

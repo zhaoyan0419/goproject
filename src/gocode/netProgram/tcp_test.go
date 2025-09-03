@@ -42,3 +42,11 @@ func TestServerListen(t *testing.T) {
 func TestClientDial(t *testing.T) {
 	ClientDial()
 }
+
+// 格式化消息传输测试
+func TestServerListenFormat(t *testing.T) {
+	ServerListenFormat()
+}
+func TestClientDialFormat(t *testing.T) {
+	ClientDialFormat()
+}

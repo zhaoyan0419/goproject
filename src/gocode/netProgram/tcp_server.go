@@ -1,8 +1,10 @@
 package netProgram
 
 import (
+	"encoding/gob"
 	"fmt"
 	"log"
+	"math/rand/v2"
 	"net"
 	"sync"
 	"time"
@@ -110,20 +112,6 @@ func HandleConn(conn net.Conn) {
 
 }
 
-// 循环读
-func ServerLoopRead(conn net.Conn, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for {
-		s1 := make([]byte, 1024)
-		n, err := conn.Read(s1)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		log.Printf("received from client data is :%s", string(s1[:n]))
-	}
-}
-
 // 验证写阻塞
 func ServerWriteBlock() {
 	ServerAddr := ":5678"
@@ -146,26 +134,6 @@ func ServerWriteBlock() {
 
 }
 
-// 处理conn，循环写入
-func ServerLoopWrite(conn net.Conn, wg *sync.WaitGroup) {
-	defer wg.Done()
-	// 设置超时，无能无止境的写，永远写
-	//conn.SetWriteDeadline(time.Now().Add(time.Second * 5))
-	num := 10
-	data := []byte("hello" + "\n")
-	for i := 0; i < num; i++ {
-
-		wn, err := conn.Write(data)
-		if err != nil {
-			fmt.Println("数据写入失败", err)
-			break
-		}
-		if err == nil && wn == len(data) {
-			log.Println("数据写入成功，第", i, "次写入")
-		}
-	}
-}
-
 // 处理conn，单次写入
 func ServerWriteOnce(conn net.Conn) {
 	data := []byte("server send some data to client" + "\n")
@@ -181,7 +149,6 @@ func ServerWriteOnce(conn net.Conn) {
 
 // server监听（通用）
 func ServerListen() {
-	wg := sync.WaitGroup{}
 	ServerAddr := ":5678"
 	listener, err := net.Listen(tcp, ServerAddr)
 	if err != nil {
@@ -195,8 +162,137 @@ func ServerListen() {
 			log.Println(err)
 			break
 		}
-		wg.Add(2)
-		go ServerLoopWrite(conn, &wg)
-		go ServerLoopRead(conn, &wg)
+		ServerHandleConnConcurrency(conn)
+	}
+}
+
+// 服务端并发读写
+func ServerHandleConnConcurrency(conn net.Conn) {
+	defer conn.Close()
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go ServerLoopRead(conn, &wg)
+	wg.Add(1)
+	go ServerLoopWrite(conn, &wg, "Server Write From Goroutine1")
+	wg.Add(1)
+	go ServerLoopWrite(conn, &wg, "Server Write From Goroutine2")
+	wg.Add(1)
+	go ServerLoopWrite(conn, &wg, "Server Write From Goroutine3")
+	wg.Wait()
+}
+
+// 服务端循环写入
+func ServerLoopWrite(conn net.Conn, wg *sync.WaitGroup, dt string) {
+	defer wg.Done()
+	// 设置超时，无能无止境的写，永远写
+	//conn.SetWriteDeadline(time.Now().Add(time.Second * 5))
+	num := 10
+	data := []byte(dt + "\n")
+	for i := 0; i < num; i++ {
+
+		wn, err := conn.Write(data)
+		if err != nil {
+			fmt.Println("数据写入失败", err)
+			break
+		}
+		if err == nil && wn == len(data) {
+			log.Println("数据写入成功，第", i, "次写入,写入内容", dt)
+		}
+	}
+}
+
+// 服务端循环读
+func ServerLoopRead(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		s1 := make([]byte, 1024)
+		n, err := conn.Read(s1)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		log.Printf("received from client data is :%s", string(s1[:n]))
+	}
+}
+
+// server监听格式化数据传输
+func ServerListenFormat() {
+	ServerAddr := ":5678"
+	listener, err := net.Listen(tcp, ServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer listener.Close()
+	fmt.Println("Server Listening Success, Listen Address:", ServerAddr)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		ServerHandleConnFormat(conn)
+	}
+}
+
+// 服务端处理格式化消息并传输
+func ServerHandleConnFormat(conn net.Conn) {
+	defer conn.Close()
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go ServerWriteFormat(conn, &wg)
+	wg.Wait()
+}
+
+// 服务端循环写入
+func ServerWriteFormat(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		// 向客户端发送数据
+		// 数据编码后发送
+
+		// 创建需要传递的数据
+		// 自定义的消息结构类型
+		type Message struct {
+			ID      uint   `json:"id,omitempty"`
+			Code    string `json:"code,omitempty"`
+			Content string `json:"content,omitempty"`
+		}
+		message := Message{
+			ID:      rand.Uint(),
+			Code:    "SERVER-STANDARD",
+			Content: "message from server",
+		}
+
+		//// 1. JSON，文本编码
+		//// 创建编码器
+		//encoder := json.NewEncoder(conn)
+		//// 使用编码器进行编码
+		//// encode 成功后，会写入到conn，已经完成了conn.write()
+		//if err := encoder.Encode(message); err != nil {
+		//	log.Println(err)
+		//	time.Sleep(time.Second * 2)
+		//	continue
+		//}
+		//log.Println("Message Was Send")
+		//time.Sleep(time.Second * 2)
+
+		//// 测试二进制内容
+		//var buf bytes.Buffer
+		//testEncoder := json.NewEncoder(&buf)
+		//testEncoder.Encode(message)
+		//fmt.Println(buf.String())
+		//conn.Write([]byte(buf.String()))
+		//// 2. GOB，Binary编码
+
+		encoder := gob.NewEncoder(conn)
+		// 使用编码器进行编码
+		// encode 成功后，会写入到conn，已经完成了conn.write()
+		if err := encoder.Encode(message); err != nil {
+			log.Println(err)
+			time.Sleep(time.Second * 2)
+			continue
+		}
+		log.Println("Message Was Send")
+		time.Sleep(time.Second * 2)
 	}
 }
