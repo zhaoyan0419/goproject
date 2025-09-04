@@ -2,8 +2,11 @@ package netProgram
 
 import (
 	"encoding/gob"
+	"errors"
 	"fmt"
+	"io"
 	"log"
+	"math/rand/v2"
 	"net"
 	"sync"
 	"time"
@@ -246,7 +249,7 @@ func ClientHandleConnFromat(conn net.Conn) {
 	wg.Wait()
 }
 
-// 客户端循环读取
+// 客户端格式化读消息
 func ClientReadFormat(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -280,4 +283,110 @@ func ClientReadFormat(conn net.Conn, wg *sync.WaitGroup) {
 		}
 		log.Println(message)
 	}
+}
+
+// Client拨号dial，短连接编程示例
+func ClientDialShort() {
+	ServerAddr := "127.0.0.1:5678"
+	conn, err := net.Dial(tcp, ServerAddr)
+	if err != nil {
+		log.Fatal("Dial failed", err)
+	}
+	fmt.Println("Connect Server Success,ServerAddr:", conn.RemoteAddr().String())
+	defer conn.Close()
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go ClientReadShort(conn, &wg)
+	wg.Wait()
+}
+
+// 短连接读
+func ClientReadShort(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+	defer conn.Close()
+
+	for {
+		// 从客户端接收到数据
+		//接收到数据后，解码后使用
+		//传递的消息类型
+		message := Message{}
+
+		// 2. GOB解码
+		decoder := gob.NewDecoder(conn)
+		// 利用解码器进行解码
+		// 解码操作，从conn中读取内容，成功后会将解码后的结果赋值到message
+		err := decoder.Decode(&message)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				log.Println("Link Was Closed")
+				break
+			}
+			log.Println(err)
+			continue
+		}
+		log.Println(message)
+	}
+}
+
+// 相应服务端长连接
+// Client拨号dial，短连接编程示例
+func ClientDialHB() {
+	ServerAddr := "127.0.0.1:5678"
+	conn, err := net.Dial(tcp, ServerAddr)
+	if err != nil {
+		log.Fatal("Dial failed", err)
+	}
+	defer conn.Close()
+	fmt.Println("Connect Server Success,ServerAddr:", conn.RemoteAddr().String())
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go ClientReadPing(conn, &wg)
+	wg.Wait()
+}
+
+// 短连接读
+func ClientReadPing(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+	defer conn.Close()
+
+	for {
+		message := Message{}
+
+		// 2. GOB解码
+		decoder := gob.NewDecoder(conn)
+		// 利用解码器进行解码
+		// 解码操作，从conn中读取内容，成功后会将解码后的结果赋值到message
+		err := decoder.Decode(&message)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				log.Println("Link Was Closed")
+				break
+			}
+			log.Println(err)
+			continue
+		}
+		// 判断是否为ping消息类型
+		if message.Code == "SERVER-PING" {
+			log.Println("receive ping from ", conn.RemoteAddr().String())
+			ClientWritePong(conn, message)
+		}
+	}
+}
+
+func ClientWritePong(conn net.Conn, msg Message) {
+	message := Message{
+		ID:      rand.Uint(),
+		Code:    "CLIENT-PONG",
+		Content: fmt.Sprintf("这个pong是用来回复ID为%d这个ping的", msg.ID),
+		Time:    time.Now(),
+	}
+	encoder := gob.NewEncoder(conn)
+	err := encoder.Encode(message)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("pong was send to ", conn.RemoteAddr().String(), msg.Content)
+	return
 }

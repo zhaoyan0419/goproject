@@ -2,7 +2,9 @@ package netProgram
 
 import (
 	"encoding/gob"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math/rand/v2"
 	"net"
@@ -243,7 +245,7 @@ func ServerHandleConnFormat(conn net.Conn) {
 	wg.Wait()
 }
 
-// 服务端循环写入
+// 服务端格式化写入
 func ServerWriteFormat(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
@@ -294,5 +296,142 @@ func ServerWriteFormat(conn net.Conn, wg *sync.WaitGroup) {
 		}
 		log.Println("Message Was Send")
 		time.Sleep(time.Second * 2)
+	}
+}
+
+// 短连接编程示例
+func ServerListenShort() {
+	ServerAddr := ":5678"
+	listener, err := net.Listen(tcp, ServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer listener.Close()
+	fmt.Println("Server Listening Success, Listen Address:", ServerAddr)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		ServerHandleConnShort(conn)
+	}
+}
+
+// 服务端处理conn（短连接）
+func ServerHandleConnShort(conn net.Conn) {
+	defer conn.Close()
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go ServerWriteShort(conn, &wg)
+	wg.Wait()
+}
+
+// 服务端短连接写入
+func ServerWriteShort(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	// 向客户端发送数据
+	// 数据编码后发送
+
+	// 创建需要传递的数据
+
+	message := Message{
+		ID:      rand.Uint(),
+		Code:    "SERVER-STANDARD",
+		Content: "message from server",
+	}
+
+	//// 2. GOB，Binary编码
+
+	encoder := gob.NewEncoder(conn)
+	// 使用编码器进行编码
+	// encode 成功后，会写入到conn，已经完成了conn.write()
+	if err := encoder.Encode(message); err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("Message Was Send")
+	return
+}
+
+// HeartBeat心跳检测编程示例
+func ServerListenHB() {
+	ServerAddr := ":5678"
+	listener, err := net.Listen(tcp, ServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer listener.Close()
+	fmt.Println("Server Listening Success, Listen Address:", ServerAddr)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		go ServerHandleConnHB(conn)
+	}
+}
+
+// 服务端处理conn（心跳检测）
+func ServerHandleConnHB(conn net.Conn) {
+	fmt.Println("Connection is establish with ", conn.RemoteAddr().String())
+	defer conn.Close()
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go ServerPing(conn, &wg)
+
+	wg.Wait()
+}
+
+// 服务端写入（心跳检测）
+func ServerPing(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	go ServerReadPong(conn)
+	const maxPingNum = 3
+	pingErrCounter := 0
+	// 周期性的发送
+	// 利用time.ticker
+	ticker := time.NewTicker(2 * time.Second)
+	for t := range ticker.C {
+		pingMsg := Message{
+			ID:   rand.Uint(),
+			Code: "SERVER-PING",
+			Time: t,
+		}
+		//// 2. GOB，Binary编码
+		encoder := gob.NewEncoder(conn)
+		if err := encoder.Encode(pingMsg); err != nil {
+
+			fmt.Println("第", pingErrCounter+1, "次心跳检测失败，连接即将断开")
+			pingErrCounter++
+			if pingErrCounter == maxPingNum {
+				log.Println("连接断开")
+				return
+			}
+		}
+		log.Println("ping send to ", conn.RemoteAddr().String(), "ID", pingMsg.ID)
+	}
+
+}
+
+func ServerReadPong(conn net.Conn) {
+	message := Message{}
+	for {
+		decoder := gob.NewDecoder(conn)
+		err := decoder.Decode(&message)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				log.Println(err)
+				break
+			}
+			log.Println(err)
+			continue
+		}
+		log.Println(message.Code)
 	}
 }

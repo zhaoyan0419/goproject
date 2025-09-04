@@ -50,3 +50,21 @@ func TestServerListenFormat(t *testing.T) {
 func TestClientDialFormat(t *testing.T) {
 	ClientDialFormat()
 }
+
+// 短连接测试验证
+func TestServerListenShort(t *testing.T) {
+	ServerListenShort()
+}
+
+func TestClientDialShort(t *testing.T) {
+	ClientDialShort()
+}
+
+// 心跳检测测试验证
+func TestServerListenHB(t *testing.T) {
+	ServerListenHB()
+}
+
+func TestClientDialHB(t *testing.T) {
+	ClientDialHB()
+}
