@@ -1,6 +1,7 @@
 package testNetProgram
 
 import (
+	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -49,9 +50,13 @@ func HandleConn(conn net.Conn) {
 
 func HeartBeatToClient(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go ServerReadPong(conn, ctx)
 	const maxPingNum = 3
 	pingErrCounter := 0
 	ticker := time.NewTicker(time.Second * 2)
+
 	for t := range ticker.C {
 		pingMsg := HBMsg{
 			ID:      rand.Uint(),
@@ -62,14 +67,11 @@ func HeartBeatToClient(conn net.Conn, wg *sync.WaitGroup) {
 		encoder := gob.NewEncoder(conn)
 		err := encoder.Encode(pingMsg)
 		if err != nil {
-			if errors.Is(err, io.EOF) {
-				log.Println("连接已经断开")
-				return
-			}
 			log.Println("向客户端写入数据失败", err)
 			pingErrCounter++
 			if pingErrCounter == maxPingNum {
 				fmt.Println("三次心跳检测失败，conn即将被关闭")
+				cancel()
 				return
 			}
 			continue
@@ -78,4 +80,28 @@ func HeartBeatToClient(conn net.Conn, wg *sync.WaitGroup) {
 		log.Printf("向客户端发送心跳，心跳ID: %d,发送远程地址: %s\n", pingMsg.ID, conn.RemoteAddr().String())
 	}
 
+}
+
+func ServerReadPong(conn net.Conn, ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			message := HBMsg{}
+			decoder := gob.NewDecoder(conn)
+			err := decoder.Decode(&message)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				log.Println("读取错误，无法读取", err)
+				continue
+			}
+			if message.Code == "PONG" {
+				log.Printf("读取到了客户端回复的心跳PONG: %s,远程地址: %s", message.Content, conn.RemoteAddr().String())
+			}
+		}
+
+	}
 }

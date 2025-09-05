@@ -28,6 +28,7 @@ func DialToServer() {
 
 func ClientReadPing(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	for {
 		message := HBMsg{}
 		decoder := gob.NewDecoder(conn)

@@ -1,6 +1,7 @@
 package netProgram
 
 import (
+	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -390,8 +391,8 @@ func ServerHandleConnHB(conn net.Conn) {
 // 服务端写入（心跳检测）
 func ServerPing(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
-
-	go ServerReadPong(conn)
+	ctx, cancel := context.WithCancel(context.Background())
+	go ServerReadPong(conn, ctx)
 	const maxPingNum = 3
 	pingErrCounter := 0
 	// 周期性的发送
@@ -412,6 +413,7 @@ func ServerPing(conn net.Conn, wg *sync.WaitGroup) {
 			if pingErrCounter == maxPingNum {
 				log.Println("连接断开")
 				return
+				cancel()
 			}
 		}
 		log.Println("ping send to ", conn.RemoteAddr().String(), "ID", pingMsg.ID)
@@ -419,19 +421,25 @@ func ServerPing(conn net.Conn, wg *sync.WaitGroup) {
 
 }
 
-func ServerReadPong(conn net.Conn) {
-	message := Message{}
+func ServerReadPong(conn net.Conn, ctx context.Context) {
 	for {
-		decoder := gob.NewDecoder(conn)
-		err := decoder.Decode(&message)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			message := Message{}
+			decoder := gob.NewDecoder(conn)
+			err := decoder.Decode(&message)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					log.Println(err)
+					break
+				}
 				log.Println(err)
-				break
+				continue
 			}
-			log.Println(err)
-			continue
+			log.Println(message.Code)
 		}
-		log.Println(message.Code)
+
 	}
 }
