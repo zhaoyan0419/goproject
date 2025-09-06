@@ -10,6 +10,7 @@ import (
 
 // 连接池接口
 type Pool interface {
+
 	// 获取连接
 	Get() (net.Conn, error)
 	// 放回连接，不是关闭
@@ -18,6 +19,16 @@ type Pool interface {
 	Release() error
 	// 有效连接的长度
 	Len() int
+}
+
+// 连接工厂接口
+type ConnFactory interface {
+	// 生产连接
+	Factory(addr string) (net.Conn, error)
+	// 关闭连接
+	Close(net.Conn) error
+	// Ping
+	Ping(net.Conn) error
 }
 
 // 连接池典型配置
@@ -31,7 +42,7 @@ type PoolConfig struct {
 	// 空闲连接超时时间，多久后空闲连接会被释放
 	IdleTimeout time.Duration
 
-	// 连接工厂
+	// 生产连接的工厂
 	Factory ConnFactory
 }
 
@@ -54,16 +65,6 @@ type TcpPool struct {
 	idleList chan *IdleConn
 	//并发安全锁
 	mu sync.RWMutex
-}
-
-// 连接工厂接口
-type ConnFactory interface {
-	// 生产连接
-	Factory(addr string) (net.Conn, error)
-	// 关闭连接
-	Close(net.Conn) error
-	// Ping
-	Ping(net.Conn) error
 }
 
 // Tcp连接工厂类型
@@ -111,7 +112,7 @@ func (*TcpPool) Len() int {
 }
 
 const defautlMaxConnNum = 100
-const defautlInitConnNum = 100
+const defautlInitConnNum = 10
 
 func NewTcpPool(addr string, PoolConfig PoolConfig) (*TcpPool, error) {
 
@@ -134,7 +135,7 @@ func NewTcpPool(addr string, PoolConfig PoolConfig) (*TcpPool, error) {
 	}
 	if PoolConfig.InitConnNum == 0 {
 		PoolConfig.InitConnNum = defautlInitConnNum
-	} else if PoolConfig.InitConnNum > PoolConfig.MaxIdleNum {
+	} else if PoolConfig.InitConnNum > PoolConfig.MaxConnNum {
 		PoolConfig.InitConnNum = PoolConfig.MaxConnNum
 	}
 	if PoolConfig.MaxIdleNum == 0 {

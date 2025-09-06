@@ -68,3 +68,11 @@ func TestServerListenHB(t *testing.T) {
 func TestClientDialHB(t *testing.T) {
 	ClientDialHB()
 }
+
+func TestServerListenPool(t *testing.T) {
+	ServerListenPool()
+}
+
+func TestClientUseTcpPool(t *testing.T) {
+	ClientUseTcpPool()
+}

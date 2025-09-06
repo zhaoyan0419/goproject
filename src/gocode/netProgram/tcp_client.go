@@ -390,3 +390,22 @@ func ClientWritePong(conn net.Conn, msg Message) {
 	log.Println("pong was send to ", conn.RemoteAddr().String(), msg.Content)
 	return
 }
+
+// 使用连接池的客户端代码示例
+
+func ClientUseTcpPool() {
+	ServerAddr := "127.0.0.1:5678"
+	// 建立连接池
+	pool, err := NewTcpPool(ServerAddr, PoolConfig{
+		InitConnNum: 20,
+		MaxConnNum:  100,
+		MaxIdleNum:  10,
+		IdleTimeout: time.Second * 10,
+		Factory:     &TcpConnFactory{},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(pool, len(pool.idleList))
+
+}

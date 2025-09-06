@@ -443,3 +443,91 @@ func ServerReadPong(conn net.Conn, ctx context.Context) {
 
 	}
 }
+
+// ConnPool连接池服务端测试代码
+func ServerListenPool() {
+	ServerAddr := ":5678"
+	listener, err := net.Listen(tcp, ServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer listener.Close()
+	fmt.Println("Server Listening Success, Listen Address:", ServerAddr)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		go ServerHandlePool(conn)
+	}
+}
+
+// 服务端处理conn（心跳检测）
+func ServerHandlePool(conn net.Conn) {
+	fmt.Println("Connection is establish with ", conn.RemoteAddr().String())
+	defer conn.Close()
+	select {}
+	//wg := sync.WaitGroup{}
+	//
+	//wg.Add(1)
+	//go ServerPing(conn, &wg)
+	//
+	//wg.Wait()
+}
+
+// 服务端写入（心跳检测）
+func ServerPingPool(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ctx, cancel := context.WithCancel(context.Background())
+	go ServerReadPong(conn, ctx)
+	const maxPingNum = 3
+	pingErrCounter := 0
+	// 周期性的发送
+	// 利用time.ticker
+	ticker := time.NewTicker(2 * time.Second)
+	for t := range ticker.C {
+		pingMsg := Message{
+			ID:   rand.Uint(),
+			Code: "SERVER-PING",
+			Time: t,
+		}
+		//// 2. GOB，Binary编码
+		encoder := gob.NewEncoder(conn)
+		if err := encoder.Encode(pingMsg); err != nil {
+
+			fmt.Println("第", pingErrCounter+1, "次心跳检测失败，连接即将断开")
+			pingErrCounter++
+			if pingErrCounter == maxPingNum {
+				log.Println("连接断开")
+				return
+				cancel()
+			}
+		}
+		log.Println("ping send to ", conn.RemoteAddr().String(), "ID", pingMsg.ID)
+	}
+
+}
+
+func ServerReadPongPool(conn net.Conn, ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			message := Message{}
+			decoder := gob.NewDecoder(conn)
+			err := decoder.Decode(&message)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					log.Println(err)
+					break
+				}
+				log.Println(err)
+				continue
+			}
+			log.Println(message.Code)
+		}
+
+	}
+}
