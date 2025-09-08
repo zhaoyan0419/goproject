@@ -397,15 +397,57 @@ func ClientUseTcpPool() {
 	ServerAddr := "127.0.0.1:5678"
 	// 建立连接池
 	pool, err := NewTcpPool(ServerAddr, PoolConfig{
-		InitConnNum: 20,
-		MaxConnNum:  100,
-		MaxIdleNum:  10,
+		InitConnNum: 1,
+		MaxConnNum:  10,
+		MaxIdleNum:  1,
 		IdleTimeout: time.Second * 10,
 		Factory:     &TcpConnFactory{},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(pool, len(pool.idleList))
 
+	wg := sync.WaitGroup{}
+	for i := 0; i < 1; i++ {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			defer wg.Done()
+			// 获取连接
+			conn, err := pool.Get()
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			//log.Println(conn)
+			// 回收连接
+			pool.Put(conn)
+		}(&wg)
+	}
+	//conn, err := pool.Get()
+	//defer pool.Put(conn)
+	wg.Wait()
+	// 释放连接池
+	pool.Release()
+
+}
+
+// 粘包客户端read操作
+func TcpClientSticky() {
+	ServerAddr := "127.0.0.1:5678"
+	conn, err := net.Dial("tcp", ServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	buf := make([]byte, 1024)
+
+	for {
+		rn, err := conn.Read(buf)
+		if err != nil {
+			log.Println("Read Error", err)
+			break
+		}
+		fmt.Println(string(buf[:rn]))
+	}
 }

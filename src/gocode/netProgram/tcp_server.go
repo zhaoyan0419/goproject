@@ -531,3 +531,36 @@ func ServerReadPongPool(conn net.Conn, ctx context.Context) {
 
 	}
 }
+
+// 粘包测试代码
+func TcpServerSticky() {
+	ServerAddr := ":5678"
+	listener, err := net.Listen(tcp, ServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer listener.Close()
+	fmt.Println("Server Listening Success, Listen Address:", ServerAddr)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		go HandleConnSticky(conn)
+	}
+}
+
+// 粘包测试handleConn
+func HandleConnSticky(conn net.Conn) {
+	fmt.Println("Connection is establish with ", conn.RemoteAddr().String())
+	defer conn.Close()
+	for i := 0; i < 10; i++ {
+		data := "package data."
+		_, err := conn.Write([]byte(data))
+		if err != nil {
+			fmt.Println("Write failed: ", err)
+			break
+		}
+	}
+}

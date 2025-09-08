@@ -76,3 +76,11 @@ func TestServerListenPool(t *testing.T) {
 func TestClientUseTcpPool(t *testing.T) {
 	ClientUseTcpPool()
 }
+
+func TestTcpServerSticky(t *testing.T) {
+	TcpServerSticky()
+}
+
+func TestTcpClientSticky(t *testing.T) {
+	TcpClientSticky()
+}
