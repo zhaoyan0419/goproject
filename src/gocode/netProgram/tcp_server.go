@@ -555,7 +555,7 @@ func TcpServerSticky() {
 func HandleConnSticky(conn net.Conn) {
 	fmt.Println("Connection is establish with ", conn.RemoteAddr().String())
 	defer conn.Close()
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 50; i++ {
 		data := "package data."
 		_, err := conn.Write([]byte(data))
 		if err != nil {
@@ -563,4 +563,78 @@ func HandleConnSticky(conn net.Conn) {
 			break
 		}
 	}
+}
+
+// 粘包自定义编码解码测试代码
+// 粘包测试代码
+func TcpServerCoder() {
+	ServerAddr := ":5678"
+	listener, err := net.Listen(tcp, ServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer listener.Close()
+	fmt.Println("Server Listening Success, Listen Address:", ServerAddr)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		go HandleConnCoder(conn)
+	}
+}
+
+// 粘包测试handleConn
+func HandleConnCoder(conn net.Conn) {
+	fmt.Println("Connection is establish with ", conn.RemoteAddr().String())
+	defer conn.Close()
+	encoder := NewEncoder(conn)
+	for i := 0; i < 50; i++ {
+		data := "package dataaaaaa."
+		err := encoder.Encode(data)
+		if err != nil {
+			fmt.Println("Write failed: ", err)
+			break
+		}
+	}
+}
+
+// TCP特定方法
+func TcpServerSpecial() {
+
+	// 建立监听
+	// 获取listenAddr
+	laddr, err := net.ResolveTCPAddr(tcp, "127.0.0.1:5678")
+	if err != nil {
+		log.Fatal(err)
+	}
+	TcpListener, err := net.ListenTCP(tcp, laddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("TcpServer is Listening on :", TcpListener.Addr())
+	// 接收连接
+	for {
+		tcpConn, err := TcpListener.AcceptTCP()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		// 处理每个连接
+		go handleTcpConn(tcpConn)
+	}
+
+}
+
+// Tcp处理连接函数
+func handleTcpConn(tcpConn *net.TCPConn) {
+	log.Println("TcpConn set Success,The Remote Socket is :", tcpConn.RemoteAddr())
+	defer tcpConn.Close()
+	data := []byte("I Study TcpConn")
+	_, err := tcpConn.Write(data)
+	if err != nil {
+		log.Println("write Failed err:", err)
+	}
+	log.Println("Data Write Success")
 }

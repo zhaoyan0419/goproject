@@ -77,10 +77,30 @@ func TestClientUseTcpPool(t *testing.T) {
 	ClientUseTcpPool()
 }
 
+// 粘包测试
 func TestTcpServerSticky(t *testing.T) {
 	TcpServerSticky()
 }
 
 func TestTcpClientSticky(t *testing.T) {
 	TcpClientSticky()
+}
+
+// 自定义编解码器解决粘包问题测试
+func TestTcpServerCoder(t *testing.T) {
+	TcpServerCoder()
+}
+
+func TestTcpClientCoder(t *testing.T) {
+	TcpClientCoder()
+}
+
+// 验证tcpconn
+
+func TestTcpServerSpecial(t *testing.T) {
+	TcpServerSpecial()
+}
+
+func TestTcpClientSpecial(t *testing.T) {
+	TcpClientSpecial()
 }

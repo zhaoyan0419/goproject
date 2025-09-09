@@ -439,15 +439,55 @@ func TcpClientSticky() {
 		log.Fatal(err)
 	}
 	defer conn.Close()
-
 	buf := make([]byte, 1024)
 
 	for {
 		rn, err := conn.Read(buf)
 		if err != nil {
-			log.Println("Read Error", err)
+			log.Println(err)
 			break
 		}
-		fmt.Println(string(buf[:rn]))
+		log.Println(string(buf[:rn]))
 	}
+}
+
+// 粘包客户端read操作
+func TcpClientCoder() {
+	ServerAddr := "127.0.0.1:5678"
+	conn, err := net.Dial("tcp", ServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+	decoder := NewDecoder(conn)
+	var data string
+	for {
+		err := decoder.Decode(&data)
+		if err != nil {
+			log.Println(err)
+			break
+		}
+		log.Println(data)
+	}
+}
+
+// Tcp专用方法测试读
+func TcpClientSpecial() {
+	ServerAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:5678")
+	if err != nil {
+		log.Fatal(err)
+	}
+	TcpConn, err := net.DialTCP(tcp, nil, ServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("TcpConn Set Success")
+	defer TcpConn.Close()
+
+	data := make([]byte, 1024)
+	rn, err := TcpConn.Read(data)
+	if err != nil {
+		log.Println("Read Failed", err)
+	}
+	log.Println("Read Success,data:", string(data[:rn]))
 }
