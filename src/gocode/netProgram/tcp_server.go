@@ -614,6 +614,7 @@ func TcpServerSpecial() {
 		log.Fatal(err)
 	}
 	log.Println("TcpServer is Listening on :", TcpListener.Addr())
+	defer TcpListener.Close()
 	// 接收连接
 	for {
 		tcpConn, err := TcpListener.AcceptTCP()
@@ -621,6 +622,7 @@ func TcpServerSpecial() {
 			log.Println(err)
 			continue
 		}
+
 		// 处理每个连接
 		go handleTcpConn(tcpConn)
 	}
@@ -631,10 +633,13 @@ func TcpServerSpecial() {
 func handleTcpConn(tcpConn *net.TCPConn) {
 	log.Println("TcpConn set Success,The Remote Socket is :", tcpConn.RemoteAddr())
 	defer tcpConn.Close()
+	tcpConn.SetNoDelay(true)
 	data := []byte("I Study TcpConn")
-	_, err := tcpConn.Write(data)
-	if err != nil {
-		log.Println("write Failed err:", err)
+	for i := 0; i < 50; i++ {
+		_, err := tcpConn.Write(data)
+		if err != nil {
+			log.Println("write Failed err:", err)
+		}
+		log.Println("Data Write Success", i)
 	}
-	log.Println("Data Write Success")
 }

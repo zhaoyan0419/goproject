@@ -1,0 +1,297 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    secuflow: test
+  creationTimestamp: "2025-06-03T00:20:16Z"
+  generateName: csi-cbs-controller-
+  labels:
+    app: csi-cbs-controller
+    controller-revision-hash: csi-cbs-controller-57bc65898b
+    statefulset.kubernetes.io/pod-name: csi-cbs-controller-0
+  name: csi-cbs-controller-0
+  namespace: alcor-system
+  ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: StatefulSet
+      name: csi-cbs-controller
+      uid: 3fc62e80-0217-4e3b-865f-e66054619c14
+  resourceVersion: "1476671858"
+  selfLink: /api/v1/namespaces/alcor-system/pods/csi-cbs-controller-0
+  uid: 7e9fdae7-5ccc-4125-9c3b-fb7ca374fb98
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - csi-cbs-controller
+          topologyKey: kubernetes.io/hostname
+  containers:
+    - args:
+        - --feature-gates=Topology=true
+        - --csi-address=$(ADDRESS)
+        - --v=5
+        - --volume-name-prefix=cbs
+        - --retry-interval-start=60s
+        - --retry-interval-max=10m0s
+        - --timeout=120s
+        - --enable-leader-election
+        - --leader-election-type=leases
+      env:
+        - name: ADDRESS
+          value: /csi/csi.sock
+      image: local.harbor.io/library/csi-provisioner:amd64-f3f41ce
+      imagePullPolicy: IfNotPresent
+      name: csi-provisioner
+      resources:
+        limits:
+          cpu: "0"
+          memory: "0"
+        requests:
+          cpu: "0"
+          memory: "0"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+        - mountPath: /csi
+          name: socket-dir
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: cbs-controller-sa-token-5ksh5
+          readOnly: true
+    - args:
+        - --csi-address=$(ADDRESS)
+        - --v=5
+        - --leader-election=true
+      env:
+        - name: ADDRESS
+          value: /csi/csi.sock
+      image: local.harbor.io/library/csi-attacher:amd64-v2.2.0
+      imagePullPolicy: IfNotPresent
+      name: csi-attacher
+      resources:
+        limits:
+          cpu: "0"
+          memory: "0"
+        requests:
+          cpu: "0"
+          memory: "0"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+        - mountPath: /csi
+          name: socket-dir
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: cbs-controller-sa-token-5ksh5
+          readOnly: true
+    - args:
+        - --csi-address=$(ADDRESS)
+        - --v=5
+        - --leader-election=true
+      env:
+        - name: ADDRESS
+          value: /csi/csi.sock
+      image: local.harbor.io/library/csi-resizer:amd64-v0.5.0
+      imagePullPolicy: IfNotPresent
+      name: csi-resizer
+      resources:
+        limits:
+          cpu: "0"
+          memory: "0"
+        requests:
+          cpu: "0"
+          memory: "0"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+        - mountPath: /csi
+          name: socket-dir
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: cbs-controller-sa-token-5ksh5
+          readOnly: true
+    - args:
+        - --v=5
+        - --endpoint=$(ADDRESS)
+        - --driver=cbsplugin.csi.alcor.io
+      env:
+        - name: ADDRESS
+          value: unix:///csi/csi.sock
+        - name: CCBCLOUD_CBS_API_SECRET_ID
+          valueFrom:
+            secretKeyRef:
+              key: CCBCLOUD_CBS_API_SECRET_ID
+              name: csi-cbs-ccbcloud
+        - name: CCBCLOUD_CBS_API_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: CCBCLOUD_CBS_API_SECRET_KEY
+              name: csi-cbs-ccbcloud
+        - name: KUBE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: NODE_IP
+          value: 10.252.120.12
+        - name: SIGN_METHOD
+          value: v3
+        - name: HTTP_SCHEME
+          value: HTTPS
+        - name: HTTP_ENDPOINT
+          value: cbs.api3.yunbj01.ccb.com
+        - name: REGION
+          value: bj
+        - name: ZONE
+          value: bj-1
+      image: local.harbor.io/library/kubernetes-csi-cbs:e48d_cbs-1.24_241119_amd64
+      imagePullPolicy: Always
+      name: csi-cbsplugin
+      resources:
+        limits:
+          cpu: "0"
+          memory: "0"
+        requests:
+          cpu: "0"
+          memory: "0"
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+        - mountPath: /csi
+          name: socket-dir
+        - mountPath: /var/log/alcor
+          name: host-log
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: cbs-controller-sa-token-5ksh5
+          readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  hostNetwork: true
+  hostname: csi-cbs-controller-0
+  nodeName: nh-master1
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: cbs-controller-sa
+  serviceAccountName: cbs-controller-sa
+  subdomain: csi-cbs-controller
+  terminationGracePeriodSeconds: 30
+  tolerations:
+    - operator: Exists
+  volumes:
+    - emptyDir: {}
+      name: socket-dir
+    - hostPath:
+        path: /var/log/alcor
+        type: ""
+      name: host-log
+    - name: cbs-controller-sa-token-5ksh5
+      secret:
+        defaultMode: 420
+        secretName: cbs-controller-sa-token-5ksh5
+status:
+  conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-06-03T00:20:16Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-08-25T09:09:36Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-08-25T09:09:36Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-06-03T00:20:16Z"
+      status: "True"
+      type: PodScheduled
+  containerStatuses:
+    - containerID: docker://69eb732479c3aeb3ef9f78f74ff91ba8860a98895f031cdde1ff20703b71fe3c
+      image: local.harbor.io/library/csi-attacher:amd64-v2.2.0
+      imageID: docker-pullable://local.harbor.io/library/csi-attacher@sha256:b6c51737eabb839d265d5622af49b4111f8ae3024baa26b1a31b4c765749a6e4
+      lastState:
+        terminated:
+          containerID: docker://5096a99db55c469e739be1e31e8809a23e1886ddfd1b7d682cc6106284fa554d
+          exitCode: 255
+          finishedAt: "2025-08-25T09:08:55Z"
+          reason: Error
+          startedAt: "2025-06-03T00:20:16Z"
+      name: csi-attacher
+      ready: true
+      restartCount: 1
+      started: true
+      state:
+        running:
+          startedAt: "2025-08-25T09:09:35Z"
+    - containerID: docker://abb21b89d042c8bb56b731420555d24be4c1872bc80c6fa813bb58da2fb4c5c7
+      image: local.harbor.io/library/kubernetes-csi-cbs:e48d_cbs-1.24_241119_amd64
+      imageID: docker-pullable://local.harbor.io/library/kubernetes-csi-cbs@sha256:40f47b4366a5e175c83a1708e052e8279bdbb5cad7b883b901616c99b8b2b9b7
+      lastState:
+        terminated:
+          containerID: docker://81939914e756c09da5dd364555432dc8046fe8406722e92fba8bf10580abcd48
+          exitCode: 255
+          finishedAt: "2025-08-25T09:08:55Z"
+          reason: Error
+          startedAt: "2025-06-03T00:56:00Z"
+      name: csi-cbsplugin
+      ready: true
+      restartCount: 12
+      started: true
+      state:
+        running:
+          startedAt: "2025-08-25T09:09:36Z"
+    - containerID: docker://12af6d5a6567187d3a9027d427c6b1af9101beaab68ca955b2df16a0a86964b3
+      image: local.harbor.io/library/csi-provisioner:amd64-f3f41ce
+      imageID: docker-pullable://local.harbor.io/library/csi-provisioner@sha256:ae2c1385ee573ca3c85ea117f1ef4ceb41402fcd2c2084115093c432dee6f759
+      lastState:
+        terminated:
+          containerID: docker://1ebc917c4fdaa122fcbee2abb140a958b1e9b81ff27bd7e41631ab5f3ba603a9
+          exitCode: 255
+          finishedAt: "2025-08-25T09:08:55Z"
+          reason: Error
+          startedAt: "2025-06-03T00:20:16Z"
+      name: csi-provisioner
+      ready: true
+      restartCount: 1
+      started: true
+      state:
+        running:
+          startedAt: "2025-08-25T09:09:35Z"
+    - containerID: docker://41a8da46bdbec1eadddf46fdecd0e1d896c84d996eaebcdcb7e708e4b5e9736c
+      image: local.harbor.io/library/csi-resizer:amd64-v0.5.0
+      imageID: docker-pullable://local.harbor.io/library/csi-resizer@sha256:d20d8889d89e67adaade0618b2942a6f9d7f27c4a7003026e1210f5e90de8459
+      lastState:
+        terminated:
+          containerID: docker://a8c2900f9e8556baec56bd3d92d6605fdac6954bc7a360ef4517dae1ced77bf8
+          exitCode: 255
+          finishedAt: "2025-08-25T09:08:55Z"
+          reason: Error
+          startedAt: "2025-06-03T00:20:17Z"
+      name: csi-resizer
+      ready: true
+      restartCount: 1
+      started: true
+      state:
+        running:
+          startedAt: "2025-08-25T09:09:35Z"
+  hostIP: 10.10.2.21
+  phase: Running
+  podIP: 10.10.2.21
+  podIPs:
+    - ip: 10.10.2.21
+  qosClass: BestEffort
+  startTime: "2025-06-03T00:20:16Z"

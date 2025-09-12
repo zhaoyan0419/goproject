@@ -1,0 +1,21 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: test
+spec:
+  containers:
+    - name: c1
+      image: xxx.xxx:latest
+      imagePullPolicy: IfNotPresent
+    - name: c2
+      image: xxx.xxx:latest
+      imagePullPolicy: IfNotPresent
+    - name: c3
+      image: xxx.xxx:latest
+      imagePullPolicy: IfNotPresent
+    - name: c4
+      image: xxx.xxx:latest
+      imagePullPolicy: IfNotPresent
+    - name: c5
+      image: xxx.xxx:latest
+      imagePullPolicy: IfNotPresent

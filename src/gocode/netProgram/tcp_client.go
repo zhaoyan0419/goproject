@@ -451,7 +451,7 @@ func TcpClientSticky() {
 	}
 }
 
-// 粘包客户端read操作
+// 客户端解决read操作粘包
 func TcpClientCoder() {
 	ServerAddr := "127.0.0.1:5678"
 	conn, err := net.Dial("tcp", ServerAddr)
@@ -485,9 +485,17 @@ func TcpClientSpecial() {
 	defer TcpConn.Close()
 
 	data := make([]byte, 1024)
-	rn, err := TcpConn.Read(data)
-	if err != nil {
-		log.Println("Read Failed", err)
+	for {
+		rn, err := TcpConn.Read(data)
+
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			log.Println("Read Failed", err)
+			continue
+		}
+		log.Println("Read Success,data:", string(data[:rn]))
 	}
-	log.Println("Read Success,data:", string(data[:rn]))
+
 }
