@@ -3,9 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/src/gocode/netProgram"
 	"io"
 	"log"
 	"net"
+	"strconv"
 	"time"
 )
 
@@ -115,7 +117,7 @@ func UDPSenderBroadcast() {
 	i := 1
 
 	for {
-		data := []byte("向广播地址发送数据。。。" + string(i))
+		data := []byte("向广播地址发送数据。。。" + strconv.Itoa(i))
 		_, err := udpConn.WriteToUDP(data, raddr)
 		if err != nil {
 			log.Println(err)
@@ -130,5 +132,5 @@ func UDPSenderBroadcast() {
 }
 
 func main() {
-	UDPSenderBroadcast()
+	netProgram.UDPFileDownLoad()
 }

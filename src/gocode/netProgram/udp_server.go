@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 )
 
 const udp = "udp"
@@ -139,5 +140,55 @@ func UDPReceiverBroadcast() {
 			continue
 		}
 		log.Println("received data: ", string(buf[:rn]), ". From: ", raddr.String())
+	}
+}
+
+// 文件传输（接收端）
+func UDPFileDownLoad() {
+	laddress := ":5678"
+	laddr, err := net.ResolveUDPAddr(udp, laddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+	udpConn, err := net.ListenUDP(udp, laddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("server was listening on", udpConn.LocalAddr().String())
+	defer udpConn.Close()
+
+	// 确认文件名并恢复确认
+	buf := make([]byte, 4096)
+	rn, raddr, err := udpConn.ReadFromUDP(buf)
+	if err != nil {
+		log.Fatal(err)
+	}
+	filename := string(buf[:rn])
+	if _, err := udpConn.WriteToUDP([]byte("filename ok"), raddr); err != nil {
+		log.Fatal(err)
+	}
+	// 确认完毕，创建文件，接收内容
+	file, err := os.Create(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	i := 1
+	for {
+		rn, _, err := udpConn.ReadFromUDP(buf)
+		if err != nil {
+			log.Println(err)
+			break
+		}
+		if string(buf[:rn]) == "EOF" {
+			log.Println("文件下载完毕")
+			break
+		}
+
+		if _, err := file.Write(buf[:rn]); err != nil {
+			log.Fatal(err)
+		}
+		log.Println("read", i)
+		i++
 	}
 }

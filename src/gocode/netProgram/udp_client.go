@@ -1,9 +1,12 @@
 package netProgram
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"os"
 	"time"
 )
 
@@ -128,4 +131,73 @@ func UDPSenderBroadcast() {
 		i++
 	}
 
+}
+
+// 文件传输（上传）
+func UDPFileUpLoad() {
+	// 1 获取文件信息
+	filename := "./xxx.mp3"
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	// 文件信息
+	fileinfo, err := file.Stat()
+	if err != nil {
+		log.Fatal(err)
+	}
+	//fileinfo.Size()	fileinfo.Name()
+
+	// 2 连接服务器
+	raddress := "192.168.1.14:5678"
+	raddr, err := net.ResolveUDPAddr(udp, raddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+	udpConn, err := net.DialUDP(udp, nil, raddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer udpConn.Close()
+
+	// 3 发送文件名
+	if _, err := udpConn.Write([]byte(fileinfo.Name())); err != nil {
+		log.Fatal(err)
+	}
+	// 4 服务器确认
+	buf := make([]byte, 4096)
+	rn, err := udpConn.Read(buf)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// 判断服务端
+	if string(buf[:rn]) != "filename ok" {
+		log.Println(errors.New("filename error"))
+		return
+	}
+	i := 1
+	// 发送文件内容
+	for {
+		rn, err := file.Read(buf)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				log.Println("file read over")
+				udpConn.Write([]byte("EOF"))
+				break
+			}
+			log.Fatal(err)
+		}
+		// 发送内容到服务端
+		if _, err = udpConn.Write(buf[:rn]); err != nil {
+			log.Fatal(err)
+		}
+		log.Println(i)
+		i++
+		time.Sleep(time.Second)
+	}
+
+	// 文件发送完成
+	log.Println("file send complete.")
+	time.Sleep(time.Second * 2)
 }
