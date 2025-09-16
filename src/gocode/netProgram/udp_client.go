@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -121,7 +122,7 @@ func UDPSenderBroadcast() {
 	i := 1
 
 	for {
-		data := []byte("向广播地址发送数据。。。" + string(i))
+		data := []byte("向广播地址发送数据。。。" + strconv.Itoa(i))
 		_, err := udpConn.WriteToUDP(data, raddr)
 		if err != nil {
 			log.Println(err)
