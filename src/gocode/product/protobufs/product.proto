@@ -1,0 +1,27 @@
+syntax = "proto3";
+// 定义一个选项，用于说明生成的go代码所在的包
+option go_package = "./compilesReadOnly";
+
+// 定义用于在服务间传递的消息
+
+// 响应的产品信息结构
+message ProductResponse {
+  int64  id = 1;
+  string name = 2;
+  bool is_sale = 3;
+}
+
+// 请求产品信息时的参数消息
+message ProductRequest{
+  int64 id =1;
+}
+
+// 定义服务，完成操作
+service Product{
+  // 定义服务操作
+  // 远程过程，服务器端的过程
+  rpc ProductInfo (ProductRequest) returns (ProductResponse){}
+  // 其他的服务操作
+}
+
+// protoc --go_out=./protobufs --go-grpc_out=./protobufs ./protobufs/product.proto

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/src/gocode/testproject01/unit3/demo03/tuil"
+	"zhaoyan/src/gocode/testproject01/unit3/demo03/tuil"
 )
 
 func init() {
